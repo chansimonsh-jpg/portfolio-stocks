@@ -42,15 +42,28 @@ def fetch_dividend_yield(symbol):
             0
         )
 
+        # 英股特殊處理：price 係便士，需要除 100 轉英鎊
+        is_uk = symbol.endswith(".L")
+
         if dividend_rate and price and float(price) > 0:
-            result = float(dividend_rate) / float(price)
-            print(f"  {symbol}: rate={dividend_rate}, price={price}, yield={result*100:.2f}%")
+            p = float(price)
+            if is_uk:
+                p = p / 100  # 便士轉英鎊
+            result = float(dividend_rate) / p
+            print(f"  {symbol}: rate={dividend_rate}, price={p:.2f}, yield={result*100:.2f}%")
             return round(result, 6)
 
+        # Fallback: 用 dividendYield（ETF 通常只有呢個）
         yield_val = info.get("dividendYield") or 0
         if yield_val and 0 < float(yield_val) < 0.5:
             print(f"  {symbol}: yield(fallback)={float(yield_val)*100:.2f}%")
             return round(float(yield_val), 6)
+
+        # 再試 trailingAnnualDividendYield
+        trailing = info.get("trailingAnnualDividendYield") or 0
+        if trailing and 0 < float(trailing) < 0.5:
+            print(f"  {symbol}: trailing yield={float(trailing)*100:.2f}%")
+            return round(float(trailing), 6)
 
         print(f"  {symbol}: no dividend data")
         return 0
