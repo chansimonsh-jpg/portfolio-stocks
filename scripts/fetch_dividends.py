@@ -55,10 +55,16 @@ def fetch_dividend_yield(symbol):
             if dividend_rate and price:
                 yield_val = dividend_rate / price
         
-        return round(float(yield_val), 6) if yield_val else 0
-    except Exception as e:
-        print(f"Error fetching {symbol}: {e}")
-        return 0
+        # yfinance 返回嘅已經係小數（0.03 = 3%），唔需要除100
+        # 但部分情況會返回百分比格式，需要判斷
+        result = float(yield_val)
+        # 如果大於 0.5，即係百分比格式，需要除 100
+        if result > 0.5:
+            result = result / 100
+        return round(result, 6) if result else 0
+            except Exception as e:
+                print(f"Error fetching {symbol}: {e}")
+                return 0
 
 def main():
     print(f"Fetching dividend yields for {len(SYMBOLS)} symbols...")
