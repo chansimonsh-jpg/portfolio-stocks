@@ -40,31 +40,27 @@ def fetch_dividend_yield(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
-        
-        # 嘗試多個欄位
+
         yield_val = (
             info.get("dividendYield") or
             info.get("trailingAnnualDividendYield") or
             0
         )
-        
-        # 如果 dividendYield 係 None 或 0，試用 dividendRate / price 計算
+
         if not yield_val or yield_val == 0:
             dividend_rate = info.get("dividendRate") or 0
             price = info.get("regularMarketPrice") or info.get("currentPrice") or 0
             if dividend_rate and price:
                 yield_val = dividend_rate / price
-        
-        # yfinance 返回嘅已經係小數（0.03 = 3%），唔需要除100
-        # 但部分情況會返回百分比格式，需要判斷
-        result = float(yield_val)
-        # 如果大於 0.5，即係百分比格式，需要除 100
+
+        result = float(yield_val) if yield_val else 0
         if result > 0.5:
             result = result / 100
-        return round(result, 6) if result else 0
-            except Exception as e:
-                print(f"Error fetching {symbol}: {e}")
-                return 0
+        return round(result, 6)
+
+    except Exception as e:
+        print(f"Error fetching {symbol}: {e}")
+        return 0
 
 def main():
     print(f"Fetching dividend yields for {len(SYMBOLS)} symbols...")
