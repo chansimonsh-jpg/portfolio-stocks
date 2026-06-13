@@ -1,8 +1,8 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "updatedAt": "2026-06-13",
   "totalSymbols": 75,
-  "withDividend": 66,
+  "withDividend": 68,
   "yields": {
     "AAPL": 0.00371,
     "MSFT": 0.009316,
@@ -30,7 +30,7 @@
     "MCD": 0.026123,
     "SPY": 0.007675,
     "VOO": 0.008016,
-    "QQQ": 0.38,
+    "QQQ": 0.002468,
     "VTI": 0.007691,
     "GLD": 0,
     "ARKK": 0,
@@ -77,7 +77,7 @@
     "BBCA.JK": 0.060084,
     "BMRI.JK": 0.113562,
     "TLKM.JK": 0.07429,
-    "MAYBANK.KL": 0,
-    "CIMB.KL": 0
+    "MAYBANK.KL": 0.061567,
+    "CIMB.KL": 0.054127
   }
 }
