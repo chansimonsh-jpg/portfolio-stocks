@@ -1,4 +1,5 @@
 import json
+import time
 import yfinance as yf
 from datetime import datetime
 
@@ -29,74 +30,98 @@ SYMBOLS = {
     "MAYBANK.KL": "SEA", "CIMB.KL": "SEA",
 }
 
+MAX_RETRIES = 3
+RETRY_DELAY = 5       # seconds between retries on failure
+REQUEST_DELAY = 1.5   # seconds between symbols (avoid rate limiting)
+
+
 def fetch_dividend_yield(symbol):
-    try:
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
 
-        dividend_rate = info.get("dividendRate") or 0
-        price = (
-            info.get("regularMarketPrice") or
-            info.get("currentPrice") or
-            info.get("previousClose") or
-            0
-        )
+            dividend_rate = info.get("dividendRate") or 0
+            price = (
+                info.get("regularMarketPrice") or
+                info.get("currentPrice") or
+                info.get("previousClose") or
+                0
+            )
 
-        # 英股特殊處理：price 係便士，需要除 100 轉英鎊
-        is_uk = symbol.endswith(".L")
+            # 英股特殊處理：price 係便士，需要除 100 轉英鎊
+            is_uk = symbol.endswith(".L")
+            if dividend_rate and price and float(price) > 0:
+                p = float(price)
+                if is_uk:
+                    p = p / 100  # 便士轉英鎊
+                result = float(dividend_rate) / p
+                print(f"  {symbol}: rate={dividend_rate}, price={p:.2f}, yield={result*100:.2f}%")
+                return round(result, 6)
 
-        if dividend_rate and price and float(price) > 0:
-            p = float(price)
-            if is_uk:
-                p = p / 100  # 便士轉英鎊
-            result = float(dividend_rate) / p
-            print(f"  {symbol}: rate={dividend_rate}, price={p:.2f}, yield={result*100:.2f}%")
-            return round(result, 6)
+            # Fallback: 用 dividendYield（ETF 通常只有呢個）
+            yield_val = info.get("dividendYield") or 0
+            if yield_val and 0 < float(yield_val) < 0.5:
+                print(f"  {symbol}: yield(fallback)={float(yield_val)*100:.2f}%")
+                return round(float(yield_val), 6)
 
-        # Fallback: 用 dividendYield（ETF 通常只有呢個）
-        yield_val = info.get("dividendYield") or 0
-        if yield_val and 0 < float(yield_val) < 0.5:
-            print(f"  {symbol}: yield(fallback)={float(yield_val)*100:.2f}%")
-            return round(float(yield_val), 6)
+            # 再試 trailingAnnualDividendYield
+            trailing = info.get("trailingAnnualDividendYield") or 0
+            if trailing and 0 < float(trailing) < 0.5:
+                print(f"  {symbol}: trailing yield={float(trailing)*100:.2f}%")
+                return round(float(trailing), 6)
 
-        # 再試 trailingAnnualDividendYield
-        trailing = info.get("trailingAnnualDividendYield") or 0
-        if trailing and 0 < float(trailing) < 0.5:
-            print(f"  {symbol}: trailing yield={float(trailing)*100:.2f}%")
-            return round(float(trailing), 6)
+            print(f"  {symbol}: no dividend data")
+            return 0
 
-        print(f"  {symbol}: no dividend data")
-        return 0
+        except Exception as e:
+            print(f"  {symbol}: attempt {attempt}/{MAX_RETRIES} failed - {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"  {symbol}: giving up after {MAX_RETRIES} attempts")
+                return None  # None = fetch failed, distinguish from "no dividend" (0)
 
-    except Exception as e:
-        print(f"Error fetching {symbol}: {e}")
-        return 0
 
 def main():
     print(f"Fetching dividend yields for {len(SYMBOLS)} symbols...")
 
-    yields = {}
-    success = 0
-    failed = 0
-
-    for symbol, market in SYMBOLS.items():
-        yield_val = fetch_dividend_yield(symbol)
-        yields[symbol] = yield_val
-
-        if yield_val > 0:
-            success += 1
-        else:
-            failed += 1
-
+    # 讀取現有資料作為 fallback（fetch 失敗時保留舊數值）
+    existing_yields = {}
     version = "1.0.0"
     try:
         with open("dividends.json", "r") as f:
             existing = json.load(f)
+            existing_yields = existing.get("yields", {})
             parts = existing.get("version", "1.0.0").split(".")
             parts[2] = str(int(parts[2]) + 1)
             version = ".".join(parts)
-    except:
+    except Exception:
         pass
+
+    yields = {}
+    success = 0
+    failed = 0
+    errors = []
+
+    for i, (symbol, market) in enumerate(SYMBOLS.items(), 1):
+        yield_val = fetch_dividend_yield(symbol)
+
+        if yield_val is None:
+            # Fetch failed - 保留舊數值（如果有），否則 0
+            yields[symbol] = existing_yields.get(symbol, 0)
+            failed += 1
+            errors.append(symbol)
+        else:
+            yields[symbol] = yield_val
+            if yield_val > 0:
+                success += 1
+            else:
+                failed += 1
+
+        # 避免 rate limiting，每隻股票之間 delay
+        if i < len(SYMBOLS):
+            time.sleep(REQUEST_DELAY)
 
     output = {
         "version": version,
@@ -111,6 +136,14 @@ def main():
 
     print(f"\nDone! {success} with dividend, {failed} without")
     print(f"Updated dividends.json to version {version}")
+
+    if errors:
+        print(f"\n⚠️  Failed to fetch (kept old values): {', '.join(errors)}")
+        # Exit with error code if too many failures (helps detect systemic issues)
+        if len(errors) > len(SYMBOLS) * 0.3:  # >30% failed
+            print(f"\n❌ Too many failures ({len(errors)}/{len(SYMBOLS)}), failing the job")
+            exit(1)
+
 
 if __name__ == "__main__":
     main()
