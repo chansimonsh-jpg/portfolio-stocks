@@ -30,15 +30,22 @@ SYMBOLS = {
     "MAYBANK.KL": "SEA", "CIMB.KL": "SEA",
 }
 
+# Yahoo Finance symbol overrides — some symbols use numeric codes instead of names
+SYMBOL_OVERRIDES = {
+    "MAYBANK.KL": "1155.KL",  # Malayan Banking Berhad
+    "CIMB.KL": "1023.KL",     # CIMB Group Holdings Berhad
+}
+
 MAX_RETRIES = 3
 RETRY_DELAY = 5       # seconds between retries on failure
 REQUEST_DELAY = 1.5   # seconds between symbols (avoid rate limiting)
 
 
 def fetch_dividend_yield(symbol):
+    fetch_symbol = SYMBOL_OVERRIDES.get(symbol, symbol)
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(fetch_symbol)
             info = ticker.info
 
             dividend_rate = info.get("dividendRate") or 0
@@ -60,14 +67,15 @@ def fetch_dividend_yield(symbol):
                 return round(result, 6)
 
             # Fallback: 用 dividendYield（ETF 通常只有呢個）
+            # 正常股息率範圍 0%~15%，超出視為異常（常見 bug：yfinance 回傳百分比形式如 0.38 即 38%）
             yield_val = info.get("dividendYield") or 0
-            if yield_val and 0 < float(yield_val) < 0.5:
+            if yield_val and 0 < float(yield_val) < 0.15:
                 print(f"  {symbol}: yield(fallback)={float(yield_val)*100:.2f}%")
                 return round(float(yield_val), 6)
 
             # 再試 trailingAnnualDividendYield
             trailing = info.get("trailingAnnualDividendYield") or 0
-            if trailing and 0 < float(trailing) < 0.5:
+            if trailing and 0 < float(trailing) < 0.15:
                 print(f"  {symbol}: trailing yield={float(trailing)*100:.2f}%")
                 return round(float(trailing), 6)
 
