@@ -73,6 +73,8 @@
     { "symbol": "2800", "name": "Tracker Fund of Hong Kong", "market": "HK", "type": "ETF", "exchange": "HKEX", "suffix": ".HK" },
     { "symbol": "3988", "name": "Bank of China", "market": "HK", "type": "Stock", "exchange": "HKEX", "suffix": ".HK" },
     { "symbol": "0123", "name": "Yuexiu Property Company Limited", "market": "HK", "type": "Stock", "exchange": "Manual", "suffix": ".HK"},
+    { "symbol": "0667", "name": "China East Education Holdings Limited", "market": "HK", "type": "Stock", "exchange": "Manual", "suffix": ".HK"},
+    { "symbol": "1929", "name": "Chow Tai Fook Jewellery Group Limited", "market": "HK", "type": "Stock","exchange": "Manual", "suffix": ".HK" },
     { "symbol": "SHEL", "name": "Shell PLC", "market": "UK", "type": "Stock", "exchange": "LSE", "suffix": ".L" },
     { "symbol": "AZN", "name": "AstraZeneca PLC", "market": "UK", "type": "Stock", "exchange": "LSE", "suffix": ".L" },
     { "symbol": "HSBA", "name": "HSBC Holdings", "market": "UK", "type": "Stock", "exchange": "LSE", "suffix": ".L" },
