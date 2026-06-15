@@ -6,7 +6,7 @@ import yfinance as yf
 
 # 主要貨幣兌 USD 匯率
 # Yahoo Finance currency pair 格式: "{CCY}USD=X" 即 1 unit of CCY = X USD
-CURRENCIES = ["HKD", "GBP", "SGD", "IDR", "MYR", "CNY"]
+CURRENCIES = ["HKD", "GBP", "SGD", "IDR", "MYR", "CNY", "EUR", "AUD", "NZD"]
 
 MAX_RETRIES = 3
 RETRY_DELAY = 5
