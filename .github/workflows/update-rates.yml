@@ -1,29 +1,35 @@
-name: Update FX Rates
+name: Update FX rates
+
 on:
   schedule:
-    - cron: '0 2 * * 1-5'  # 週一至週五 UTC 02:00 自動跑
-  workflow_dispatch:       # 可以手動觸發
-jobs:
-  update:
-    runs-on: ubuntu-latest
+    - cron: '0 2 * * 1-5'  # 週一至週五 02:00 UTC
+  workflow_dispatch:
 
+permissions:
+  contents: write
+
+jobs:
+  update-rates:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: pip install yfinance
-      - name: Run fetch script
-        run: python scripts/fetch_rates.py
-      - name: Commit updated rates.json
+
+      - name: Fetch FX rates
+        run: python fetch_rates.py
+
+      - name: Commit and push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add rates.json
           git diff --staged --quiet || git commit -m "Auto-update FX rates $(date +'%Y-%m-%d')"
+          # 拉取遠端最新變更並 rebase，避免 push 被拒絕 (non-fast-forward)
+          git pull --rebase origin main
           git push

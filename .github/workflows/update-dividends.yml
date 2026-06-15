@@ -1,35 +1,36 @@
-name: Update Dividend Yields
+name: Update dividend yields
 
 on:
   schedule:
-    - cron: '0 2 * * 1'  # 每週一 UTC 02:00 自動跑
-  workflow_dispatch:       # 可以手動觸發
+    - cron: '0 2 * * 1'  # 每週一 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  update:
+  update-dividends:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: pip install yfinance
 
-      - name: Run fetch script
-        run: python scripts/fetch_dividends.py
+      - name: Fetch dividend yields
+        run: python fetch_dividends.py
 
-      - name: Commit updated dividends.json
+      - name: Commit and push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add dividends.json
           git diff --staged --quiet || git commit -m "Auto-update dividend yields $(date +'%Y-%m-%d')"
+          # 拉取遠端最新變更並 rebase，避免因為其他 commit (例如手動更新 stocks.json)
+          # 導致 push 被拒絕 (non-fast-forward)
+          git pull --rebase origin main
           git push
