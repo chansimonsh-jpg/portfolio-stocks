@@ -22,7 +22,7 @@ jobs:
         run: pip install yfinance
 
       - name: Fetch dividend yields
-        run: python fetch_dividends.py
+        run: python scripts/fetch_dividends.py
 
       - name: Commit and push if changed
         run: |

@@ -22,7 +22,7 @@ jobs:
         run: pip install yfinance
 
       - name: Fetch FX rates
-        run: python fetch_rates.py
+        run: python scripts/fetch_rates.py
 
       - name: Commit and push if changed
         run: |
