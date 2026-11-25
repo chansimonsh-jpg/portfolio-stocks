@@ -18,21 +18,16 @@ def fetch_rate(currency):
     symbol = f"{currency}USD=X"
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
-            price = (
-                info.get("regularMarketPrice")
-                or info.get("currentPrice")
-                or info.get("previousClose")
-                or 0
-            )
-            if price and float(price) > 0:
-                rate = float(price)
+            # 用 history() (chart endpoint)，唔用 .info (quoteSummary endpoint)：
+            # Yahoo 對 quoteSummary 回 401 / 封 GitHub Actions IP，chart endpoint 穩定好多
+            hist = yf.Ticker(symbol).history(period="5d", interval="1d")
+            closes = hist["Close"].dropna() if not hist.empty else []
+            if len(closes) and float(closes.iloc[-1]) > 0:
+                rate = float(closes.iloc[-1])
                 print(f"  {currency}: 1 {currency} = {rate:.6f} USD")
                 return rate
 
-            print(f"  {currency}: no price data")
-            return None
+            raise ValueError("no price data")
 
         except Exception as e:
             print(f"  {currency}: attempt {attempt}/{MAX_RETRIES} failed - {e}")
